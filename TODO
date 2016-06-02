@@ -1,0 +1,7 @@
+1. dervice ldap_user_searchbase from domain [keeping the variable to avoid typos/errors in searches]
+1. maybe we should generate a random caldavuserpassword [makes sense, this is a password the user never needs to know. re-running the script should just reset it]
+1. /etc/default/calendarserver script should be 0644 [fixed]
+1. why is caldavd.plist executable? [fixed]
+1. should probably disable AllowOverWireUnencrypted in plist [HTTP is disabled so everything is over an encrypted channel, changed anyway]
+1. disable xmpp notification service in plist [it is disabled, Enabled key is set to false]
+1. caldavuserpassword is in plist, should not be readable to all [changed to 600]

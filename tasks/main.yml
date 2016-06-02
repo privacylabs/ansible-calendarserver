@@ -1,0 +1,110 @@
+---
+  - name: Create caldavd user in LDAP for iMIP support
+    ldap_entry:
+      dn: 'uid=caldavd,{{ ldap_user_searchbase }}'
+      state: present
+      objectClass: inetLocalMailRecipient,inetOrgPerson,posixAccount,shadowAccount
+      uid: caldavd
+      sn: Server
+      givenName: Calendar
+      cn: Calendar Server
+      displayName: Calendar Server
+      uidNumber: '11002'
+      gidNumber: '5001'
+      gecos: Calendar Server
+      homeDirectory: /data/mail/{{ domain }}/caldavd
+      mailLocalAddress: caldavd@{{ domain }}
+      mailRoutingAddress: caldavd@{{ domain }}
+      server_uri: 'ldap://{{ ldap_ip }}:389'
+      bind_dn: 'cn=admin,{{ "dc=" + domain.split(".") | join(",dc=")}}'
+      bind_pw: '{{ ldapadminpassword }}'
+    become: yes
+
+  - name: calculate caldavd user account password hash
+    shell: "echo -n {{ caldavduserpassword }} | openssl dgst -sha256 -binary | openssl enc -base64"
+    register: hash
+
+  - name: Add password attribute for caldavd user account
+    ldap_attr:
+      dn: 'uid=caldavd,{{ ldap_user_searchbase }}'
+      name: userPassword
+      values: '{SHA256}{{ hash.stdout }}'
+      state: exact
+      bind_dn: 'cn=admin,{{ "dc=" + domain.split(".") | join(",dc=")}}'
+      bind_pw: '{{ ldapadminpassword }}'
+      server_uri: 'ldap://{{ ldap_ip }}:389'
+    become: yes
+
+  - name: install calendarserver from testing
+    apt:
+      name: calendarserver
+    become: yes
+
+  - name: Install postgresql
+    apt:
+      name: '{{ item }}'
+    with_items: [ 'postgresql-9.4', 'python-psycopg2' ]
+    become: yes
+
+  - name: create postgres user for caldavd
+    postgresql_user:
+      name: caldavd
+      role_attr_flags: 'NOCREATEDB,NOCREATEROLE,NOSUPERUSER'
+    sudo: yes
+    sudo_user: postgres
+
+  - name: create postgresql database for caldavd
+    postgresql_db:
+      name: caldav
+      owner: caldavd
+    sudo: yes
+    sudo_user: postgres
+
+  - name: import calendarserver schema
+    shell: sudo -u caldavd psql -f /usr/lib/python2.7/dist-packages/txdav/common/datastore/sql_schema/current.sql caldav
+    become: yes
+
+  - name: Create /data/caldavd folder
+    file:
+      path: /data/caldavd
+      state: directory
+      owner: caldavd
+      group: caldavd
+    become: yes
+
+  - name: Setup updated init.d script for calendarserver
+    copy:
+      src: calendarserver.initd
+      dest: /etc/init.d/calendarserver
+      owner: root
+      group: root
+      mode: 0755
+    become: yes
+
+  - name: Setup updated default script for calendarserver
+    copy:
+      src: calendarserver.default
+      dest: /etc/default/calendarserver
+      owner: root
+      group: root
+      mode: 0644
+    become: yes
+
+  - name: Setup preferences file for calendarserver
+    template:
+      src: caldavd-3.2.plist.j2
+      dest: /etc/caldavd/caldavd.plist
+      owner: caldavd
+      group: root
+      mode: 0600
+    become: yes
+
+  - name: change ownership on resources.xml
+    file:
+      path: /etc/caldavd/resources.xml
+      owner: caldavd
+    become: yes
+
+  - name: Restart calendarserver
+    service: name=calendarserver state=restarted
+    become: yes
