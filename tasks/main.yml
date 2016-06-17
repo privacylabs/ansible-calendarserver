@@ -19,10 +19,14 @@
       bind_dn: 'cn=admin,{{ "dc=" + domain.split(".") | join(",dc=")}}'
       bind_pw: '{{ ldapadminpassword }}'
     become: yes
+    tags:
+      - configuration
 
   - name: calculate caldavd user account password hash
     shell: "echo -n {{ caldavduserpassword }} | openssl dgst -sha256 -binary | openssl enc -base64"
     register: hash
+    tags:
+      - configuration
 
   - name: Add password attribute for caldavd user account
     ldap_attr:
@@ -34,17 +38,23 @@
       bind_pw: '{{ ldapadminpassword }}'
       server_uri: 'ldap://{{ ldap_ip }}:389'
     become: yes
+    tags:
+      - configuration
 
   - name: install calendarserver from testing
     apt:
       name: calendarserver
     become: yes
+    tags:
+      - packages
 
   - name: Install postgresql
     apt:
       name: '{{ item }}'
     with_items: [ 'postgresql-9.4', 'python-psycopg2' ]
     become: yes
+    tags:
+      - packages
 
   - name: create postgres user for caldavd
     postgresql_user:
@@ -52,6 +62,8 @@
       role_attr_flags: 'NOCREATEDB,NOCREATEROLE,NOSUPERUSER'
     sudo: yes
     sudo_user: postgres
+    tags:
+      - packages
 
   - name: create postgresql database for caldavd
     postgresql_db:
@@ -59,10 +71,14 @@
       owner: caldavd
     sudo: yes
     sudo_user: postgres
+    tags:
+      - packages
 
   - name: import calendarserver schema
     shell: sudo -u caldavd psql -f /usr/lib/python2.7/dist-packages/txdav/common/datastore/sql_schema/current.sql caldav
     become: yes
+    tags:
+      - packages
 
   - name: Create /data/caldavd folder
     file:
@@ -71,6 +87,8 @@
       owner: caldavd
       group: caldavd
     become: yes
+    tags:
+      - packages
 
   - name: Setup updated init.d script for calendarserver
     copy:
@@ -80,6 +98,8 @@
       group: root
       mode: 0755
     become: yes
+    tags:
+      - packages
 
   - name: Setup updated default script for calendarserver
     copy:
@@ -89,6 +109,8 @@
       group: root
       mode: 0644
     become: yes
+    tags:
+      - packages
 
   - name: Setup preferences file for calendarserver
     template:
@@ -98,13 +120,19 @@
       group: root
       mode: 0600
     become: yes
+    tags:
+      - configuration
 
   - name: change ownership on resources.xml
     file:
       path: /etc/caldavd/resources.xml
       owner: caldavd
     become: yes
+    tags:
+      - packages
 
   - name: Restart calendarserver
     service: name=calendarserver state=restarted
     become: yes
+    tags:
+      - configuration
