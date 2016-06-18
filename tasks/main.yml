@@ -63,7 +63,7 @@
     sudo: yes
     sudo_user: postgres
     tags:
-      - packages
+      - configuration
 
   - name: create postgresql database for caldavd
     postgresql_db:
@@ -72,13 +72,13 @@
     sudo: yes
     sudo_user: postgres
     tags:
-      - packages
+      - configuration
 
   - name: import calendarserver schema
     shell: sudo -u caldavd psql -f /usr/lib/python2.7/dist-packages/txdav/common/datastore/sql_schema/current.sql caldav
     become: yes
     tags:
-      - packages
+      - configuration
 
   - name: Create /data/caldavd folder
     file:
