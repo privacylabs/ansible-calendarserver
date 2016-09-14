@@ -136,3 +136,11 @@
     become: yes
     tags:
       - configuration
+
+  - name: Disable calendar server
+    service:
+      name: calendarserver
+      enabled: no
+    become: yes
+    tags:
+      - packages
