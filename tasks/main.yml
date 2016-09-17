@@ -131,6 +131,14 @@
     tags:
       - packages
 
+    name: enable calendarserver
+    service:
+      name: calendarserver
+      enabled: yes
+    become: yes
+    tags:
+      - configuration
+
   - name: Restart calendarserver
     service: name=calendarserver state=restarted
     become: yes
