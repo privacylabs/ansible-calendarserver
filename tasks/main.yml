@@ -131,7 +131,7 @@
     tags:
       - packages
 
-    name: enable calendarserver
+  - name: enable calendarserver
     service:
       name: calendarserver
       enabled: yes
