@@ -89,6 +89,7 @@
     become: yes
     tags:
       - packages
+      - configuration
 
   - name: Setup updated init.d script for calendarserver
     copy:
